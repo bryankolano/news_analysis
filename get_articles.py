@@ -8,6 +8,7 @@ from selenium.webdriver.chrome.options import Options
 #baseline python packages needed
 from datetime import datetime
 import re
+import argparse
 
 #Pandas for data collection/ indexing
 import pandas as pd
@@ -294,11 +295,16 @@ class Fox:
 
 if __name__ == '__main__':
 
+    arg = argparse.ArgumentParser(description= "Give filename and extension to save articles")
+    arg.add_argument('-filename', help = 'Provide a filename and path to save article text', default='fake.csv')
+    arguments = arg.parse_args()
+
+
     cnn = CNN(topic = 'politics', driver_loc = 'D:\Projects\gun_violence\chromedriver.exe')
     cnn.article_names_and_urls()
     cnn.grab_and_parse_articles()
-    cnn.append_csv('test.csv')
+    cnn.append_csv(arguments.filename)
 
     fox = Fox(topic= 'politics')
     fox.grab_parse_html()
-    fox.append_csv('test.csv')
+    fox.append_csv(arguments.filename)
