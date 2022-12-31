@@ -63,29 +63,37 @@ class CNN:
         self.topic = topic
         self.driver_loc = driver_loc
         
+        #if driver is in working dir, then find driver executable.
+        #otherwise, use the path provided to find the executable
         if driver_loc is None:
             self.service = Service(executable_path='chromedriver.exe')
         else:
             self.service = Service(executable_path= driver_loc)
 
+        #get the base URL for cnn and append the topic to it
         self.base_url = 'https://www.cnn.com'
         self.topic_url = f"{self.base_url}/{topic}"
 
 
     def article_names_and_urls(self):
         
-        
+        #give the driver options to ignore errors   
         options = Options()
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--ignore-ssl-errors')
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
+        options.add_argument(f"user-agent={user_agent}")
+        options.headless = True
+        
         driver = webdriver.Chrome(service= self.service, options= options)
 
         try:
+            #get the topic URL in the driver and grab the page source
             driver.get(self.topic_url)
-
             topic_homepage_html = driver.page_source
 
+            #soupify the page, turn into soup object
             topic_page_soup = BeautifulSoup(topic_homepage_html,'html.parser' )
 
             #grab the html of titles of all articles on the page
@@ -94,14 +102,17 @@ class CNN:
             #create list of all titles
             self.cnn_titles = [title.text.strip() for title in self.politic_titles]
 
-            #create list of all titles' URLs extensions
+            #create list of all titles' URLs extensionss
             url_extensions = [url['href'] for item in topic_page_soup.select('div.container_lead-plus-headlines__field-links') for url in item.select('a') ]
+            
+            #if no titles have been pulled (because CNN changed their HTML/ CSS structure) raise an error to notify.
             if len(url_extensions) == 0:
                 raise ValueError('Need to recheck the CNN code, not pulling URLs')
 
             #combine base URL with each URL extension
             self.cnn_urls = [self.base_url + url for url in url_extensions]
         
+        #if the webdriver runs into a driver exception issue, then state that an error exists
         except WebDriverException:
             print('Error getting main page')
 
@@ -112,7 +123,7 @@ class CNN:
 
     def grab_and_parse_articles(self):
   
-                #set up blank lists to append to
+        #set up blank lists to append to
         self.cnn_text_of_articles = []
         self.cnn_date = []
 
@@ -165,9 +176,11 @@ class CNN:
     def append_csv(self,filename):
         self.filename = filename
 
+        #in case of only providing filename and not extension, raise custom error
         if 'csv' not in self.filename.lower():
             raise BadExtensionException(filename)
 
+        #set up blank dataframe with column names
         cnn_df = pd.DataFrame(list(zip(self.cnn_titles, self.cnn_date, self.cnn_urls, self.cnn_text_of_articles)), columns = ['title','date','url', 'article_text'])
 
         #creat new column in dataframe with the source of the articles
@@ -208,7 +221,8 @@ class Fox:
 
         """
         self.topic = topic
-    
+
+        #set the base url and append the topic type to it (politics, sports, etc.)
         self.base_url = 'https://www.foxnews.com'
         self.topic_url = f"{self.base_url}/{topic}"
 
@@ -241,6 +255,7 @@ class Fox:
             except:
                 continue
 
+        #if no titles have been pulled (because fox news changed their HTML/ CSS structure) raise an error to notify.
         if len(self.fox_urls) == 0:
             raise ValueError('Need to recheck the Fox code, not pulling URLs')     
 
